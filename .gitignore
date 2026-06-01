@@ -1,0 +1,26 @@
+```gitignore id="g9m3qx"
+# Virtual Environment
+venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Environment Variables
+.env
+
+# Streamlit
+.streamlit/
+
+# Database
+database/chroma_db/
+
+# Uploaded Files
+uploads/
+
+# Reports
+reports/
+
+# VS Code
+.vscode/
+```
