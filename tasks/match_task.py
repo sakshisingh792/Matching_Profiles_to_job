@@ -2,60 +2,106 @@
 from crewai import Task
 from agents.ranking import ranking_agent
 
-def create_matching_task(cv_text, job_description):
+def create_matching_task(
+    cv_text,
+    job_description,
+    resume_skills,
+    jd_skills
+):
 
     return Task(
 
         description=f"""
-You are an expert technical recruiter.
+You are an expert ATS recruiter and resume evaluator.
 
-Analyze this candidate resume:
+Your task is to compare the candidate resume
+with the job description carefully.
+
+==============================
+RESUME TEXT
+==============================
 
 {cv_text}
 
-Compare it with this job description:
+==============================
+JOB DESCRIPTION
+==============================
 
 {job_description}
 
-STRICT RULES:
-- Keep response concise
-- Use short bullet points
-- Avoid long explanations
-- Do NOT create unnecessary sections
-- Only mention skills explicitly present
-- Avoid repeating information
+==============================
+EXTRACTED RESUME SKILLS
+==============================
 
-Return output EXACTLY in this format:
+{resume_skills}
+
+==============================
+REQUIRED JOB SKILLS
+==============================
+
+{jd_skills}
+
+IMPORTANT RULES:
+
+- ONLY use skills from the extracted skill lists
+- Do NOT invent technologies
+- Do NOT mark a skill missing if it exists in resume skills
+- Be accurate and strict
+- Keep response concise
+- Use bullet points only
+- ATS Score must be realistic
+- Give higher ATS score if most required skills exist
+
+==============================
+OUTPUT FORMAT
+==============================
 
 # Candidate Match Report
 
-## Match Percentage
-Example: 78%
+## ATS Score
+85%
 
 ## Matching Skills
 - Python
-- Django
 - SQL
+- Git
 
 ## Missing Skills
-- AWS
 - Docker
+- AWS
 
 ## Strengths
-- Strong backend projects
-- Good problem-solving
+- Strong backend development
+- Good database knowledge
+
+## Weaknesses
+- Limited cloud exposure
+- Missing deployment experience
 
 ## Recommendation
-Choose ONLY ONE:
-- Strong Fit
-- Moderate Fit
-- Weak Fit
+Strong Fit
+
 ## Final Summary
-Maximum 3 concise lines.
+Candidate matches most backend requirements with strong technical skills.
+
+```python id="x3p9vq"
+IMPORTANT:
+Do NOT include:
+- RESUME TEXT
+- JOB DESCRIPTION
+- EXTRACTED RESUME SKILLS
+- REQUIRED JOB SKILLS
+- IMPORTANT RULES
+- separators like =======
+- debugging information
+
+Only return the final ATS report.
+```
+
 """,
 
         expected_output="""
-Concise recruiter-style evaluation report.
+Structured ATS evaluation report.
 """,
 
         agent=ranking_agent

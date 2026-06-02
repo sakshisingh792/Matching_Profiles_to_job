@@ -47,14 +47,10 @@ print("\nMATCH RESULTS:\n")
 print(results)
 
 # STEP 7 — AI analysis using CrewAI
-task = create_matching_task(
-    cv_text,
-    job_description
-)
-
-crew = create_crew(task)
-
+resume_skills = extract_skills(cv_text) 
+jd_skills = extract_skills(job_description) 
+task = create_matching_task( cv_text, job_description, resume_skills, jd_skills )
+crew = create_crew(task) 
 result = crew.kickoff()
-
-print("\nFINAL AI REPORT:\n")
+print("\nFINAL AI REPORT:\n") 
 print(result)
