@@ -83,6 +83,21 @@ Strong Fit
 
 ## Final Summary
 Candidate matches most backend requirements with strong technical skills.
+
+```python id="x3p9vq"
+IMPORTANT:
+Do NOT include:
+- RESUME TEXT
+- JOB DESCRIPTION
+- EXTRACTED RESUME SKILLS
+- REQUIRED JOB SKILLS
+- IMPORTANT RULES
+- separators like =======
+- debugging information
+
+Only return the final ATS report.
+```
+
 """,
 
         expected_output="""
