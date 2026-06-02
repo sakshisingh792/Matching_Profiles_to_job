@@ -1,12 +1,10 @@
 
 import uuid
+import re
 import streamlit as st
+
 from tools.skill_extractor import extract_skills
-
 from tools.pdf_report import generate_pdf_report
-
-
-
 from tools.pdf_reader import extract_text_from_pdf
 from tools.embedding_tool import create_embedding
 from tools.vector_store import (
@@ -17,9 +15,6 @@ from tools.vector_store import (
 from tasks.match_task import create_matching_task
 from crew import create_crew
 
-
-
-
 # -----------------------------------
 # PAGE CONFIG
 # -----------------------------------
@@ -29,6 +24,9 @@ st.set_page_config(
     layout="wide"
 )
 
+# -----------------------------------
+# SIDEBAR
+# -----------------------------------
 st.sidebar.title("⚙ Filters")
 
 minimum_score = st.sidebar.slider(
@@ -49,7 +47,7 @@ against a job description using local AI.
 """)
 
 # -----------------------------------
-# MULTIPLE FILE UPLOAD
+# FILE UPLOAD
 # -----------------------------------
 uploaded_files = st.file_uploader(
     "Upload Resume PDFs",
@@ -87,9 +85,7 @@ if st.button("Analyze Candidates"):
                 # -----------------------------------
                 # SAVE PDF
                 # -----------------------------------
-                pdf_path = (
-                    f"uploads/{uploaded_file.name}"
-                )
+                pdf_path = f"uploads/{uploaded_file.name}"
 
                 with open(pdf_path, "wb") as f:
                     f.write(uploaded_file.read())
@@ -105,14 +101,10 @@ if st.button("Analyze Candidates"):
                         pdf_path
                     )
 
-                  
                     skills = extract_skills(cv_text)
 
                     st.subheader("🛠 Extracted Skills")
-
                     st.write(skills)
-
-  
 
                 # -----------------------------------
                 # CREATE EMBEDDING
@@ -140,11 +132,14 @@ if st.button("Analyze Candidates"):
                 )
 
                 # -----------------------------------
-                # SIMILARITY SEARCH
+                # SEARCH SIMILAR CVS
                 # -----------------------------------
                 results = search_similar_cvs(
                     job_embedding
                 )
+
+                print("\nMATCH RESULTS:\n")
+                print(results)
 
                 # -----------------------------------
                 # AI ANALYSIS
@@ -153,26 +148,41 @@ if st.button("Analyze Candidates"):
                     f"Analyzing {uploaded_file.name}..."
                 ):
 
+                    resume_skills = extract_skills(cv_text)
+
+                    jd_skills = extract_skills(job_description)
+
                     task = create_matching_task(
                         cv_text,
-                        job_description
+                        job_description,
+                        resume_skills,
+                        jd_skills
                     )
 
                     crew = create_crew(task)
 
                     result = crew.kickoff()
 
+                    print("\nCrewAI Result:\n")
+                    print(result)
+
+                # -----------------------------------
+                # SAFE RESULT HANDLING
+                # -----------------------------------
+                report_text = getattr(
+                    result,
+                    "raw",
+                    str(result)
+                )
+
                 # -----------------------------------
                 # EXTRACT SCORE
                 # -----------------------------------
-                report_text = result.raw
-
                 score = 0
 
-                import re
-
                 match = re.search(
-                    r'(\d+)%', report_text
+                    r'(\d+)%',
+                    report_text
                 )
 
                 if match:
@@ -196,6 +206,8 @@ if st.button("Analyze Candidates"):
                     f"Error processing {uploaded_file.name}: {str(e)}"
                 )
 
+                print(f"ERROR: {str(e)}")
+
         # -----------------------------------
         # SORT CANDIDATES
         # -----------------------------------
@@ -203,15 +215,10 @@ if st.button("Analyze Candidates"):
             key=lambda x: x["score"],
             reverse=True
         )
-        
+
         # -----------------------------------
         # FINAL RANKING
         # -----------------------------------
-        all_candidates.sort(
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
         st.divider()
 
         st.header("🏆 Candidate Rankings")
@@ -221,7 +228,7 @@ if st.button("Analyze Candidates"):
             start=1
         ):
 
-            # FILTER LOW SCORE CANDIDATES
+            # FILTER LOW SCORES
             if candidate['score'] < minimum_score:
                 continue
 
@@ -236,10 +243,15 @@ if st.button("Analyze Candidates"):
                 """)
 
                 # -----------------------------------
-                # ATS SCORE BAR
+                # SCORE BAR
                 # -----------------------------------
-                st.progress(candidate['score'] / 100)
+                st.progress(
+                    candidate['score'] / 100
+                )
 
+                # -----------------------------------
+                # SCORE STATUS
+                # -----------------------------------
                 if candidate['score'] >= 80:
 
                     st.success(
@@ -261,24 +273,34 @@ if st.button("Analyze Candidates"):
                 # -----------------------------------
                 # AI REPORT
                 # -----------------------------------
-                st.markdown(candidate["report"])
+                st.subheader("📋 AI Analysis Report")
+
+                st.write(candidate["report"])
 
                 # -----------------------------------
-                # PDF DOWNLOAD
+                # PDF GENERATION
                 # -----------------------------------
-                pdf_path = generate_pdf_report(
-                    candidate['name'],
-                    candidate['report']
-                )
+                try:
 
-                with open(pdf_path, "rb") as pdf_file:
+                    pdf_path = generate_pdf_report(
+                        candidate['name'],
+                        candidate['report']
+                    )
 
-                    st.download_button(
-                        label="📥 Download PDF Report",
-                        data=pdf_file,
-                        file_name=f"{candidate['name']}.pdf",
-                        mime="application/pdf",
-                        key=f"download_{idx}"
+                    with open(pdf_path, "rb") as pdf_file:
+
+                        st.download_button(
+                            label="📥 Download PDF Report",
+                            data=pdf_file,
+                            file_name=f"{candidate['name']}.pdf",
+                            mime="application/pdf",
+                            key=f"download_{idx}"
+                        )
+
+                except Exception as pdf_error:
+
+                    st.error(
+                        f"PDF generation failed: {str(pdf_error)}"
                     )
 
                 st.divider()
